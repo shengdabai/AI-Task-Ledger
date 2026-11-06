@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI 单任务投入账本</title>
+  <style>
+/* TOKENS — breakpoints: compact 720px. */
+:root{
+  --ink:#13252c;--muted:#52656d;--paper:#f3f7f8;--surface:#ffffff;--line:#b8c9ce;--brand:#075e68;--brand-hover:#064c54;
+  --brand-ink:#ffffff;--danger:#a52a2a;--danger-bg:#fff0ef;--warn:#885800;--warn-bg:#fff7df;--ok-bg:#e8f7f0;
+  --focus:#e17b17;--shadow:0 10px 28px rgba(19,37,44,.09);--font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:3rem;--radius:.65rem;
+  --f0:.82rem;--f1:1rem;--f2:1.18rem;--f3:1.55rem;--f4:2.3rem;--base-size:16px;--weight:650;--line-height:1.55;--tight:1.1;--tracking:.08em;
+  --control:2.75rem;--content:78rem;--measure:48rem;--border:1px;--focus-ring:3px;--transition:160ms;--regular:400;
+  --small-control:1.5rem;
+}
+*{box-sizing:border-box}html{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:var(--base-size);line-height:var(--line-height)}body{margin:0}button,input,select,textarea{font:inherit;color:inherit}button{min-height:var(--control);border:var(--border) solid var(--brand);background:var(--surface);color:var(--brand);padding:var(--s2) var(--s4);border-radius:var(--radius);cursor:pointer;font-weight:var(--weight);transition:background var(--transition)}button:hover{background:var(--paper)}button[type=submit],#import-confirm{background:var(--brand);color:var(--brand-ink)}button[type=submit]:hover,#import-confirm:hover{background:var(--brand-hover)}button.danger{border-color:var(--danger);color:var(--danger)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:var(--focus-ring) solid var(--focus);outline-offset:var(--s1)}.hero{background:var(--brand);color:var(--brand-ink);padding:var(--s6) max(var(--s4),calc((100% - var(--content))/2));display:flex;justify-content:space-between;gap:var(--s6);align-items:end}.hero h1{font-size:var(--f4);line-height:var(--tight);margin:var(--s1) 0}.hero p{max-width:var(--measure);margin:var(--s2) 0}.kicker{font-size:var(--f0);font-weight:var(--weight);letter-spacing:var(--tracking)}.toolbar{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:flex-end}.toolbar button{border-color:var(--brand-ink);color:var(--brand-ink);background:transparent}.toolbar .danger{border-color:var(--brand-ink);color:var(--brand-ink)}main{max-width:var(--content);margin:auto;padding:var(--s6) var(--s4) var(--s7)}.panel{background:var(--surface);border:var(--border) solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--s5);margin-bottom:var(--s5)}.panel h2{font-size:var(--f3);margin-top:0}.section-head{display:flex;justify-content:space-between;align-items:start;gap:var(--s4)}.section-head p{margin-top:0;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin:var(--s5) 0}.stats article{background:var(--surface);border-left:var(--s1) solid var(--brand);padding:var(--s4);box-shadow:var(--shadow)}.stats span,.stats small{display:block;color:var(--muted)}.stats strong{display:block;font-size:var(--f3)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}label{display:grid;gap:var(--s1);font-weight:var(--weight);min-width:0}input,select,textarea{width:100%;border:var(--border) solid var(--line);border-radius:var(--radius);padding:var(--s2) var(--s3);background:var(--surface);min-height:var(--control)}textarea{resize:vertical}.wide{grid-column:1/-1}fieldset{border:var(--border) solid var(--line);border-radius:var(--radius);padding:var(--s4);margin:var(--s5) 0}legend{font-size:var(--f2);font-weight:var(--weight);padding:0 var(--s2)}.check{display:flex;align-items:center;gap:var(--s2);min-height:var(--control);font-weight:var(--regular)}.check input{width:var(--small-control);height:var(--small-control);min-height:auto}.hint{color:var(--muted);font-size:var(--f0)}.actions{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s4)}.banner{background:var(--ok-bg);padding:var(--s3) var(--s4);border-left:var(--s1) solid var(--brand)}.warning{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}.danger,.error{color:var(--danger)}.banner.danger,.confirm{background:var(--danger-bg);border-color:var(--danger)}.error{font-weight:var(--weight)}.task-list{display:grid;gap:var(--s3)}.task{border:var(--border) solid var(--line);border-radius:var(--radius);padding:var(--s4)}.task header{display:flex;justify-content:space-between;gap:var(--s3)}.task h3{margin:0;font-size:var(--f2)}.task dl{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);margin:var(--s3) 0}.task dt{color:var(--muted);font-size:var(--f0)}.task dd{margin:0}.task .acceptance{white-space:pre-wrap}.summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s4)}.summary-card{border:var(--border) solid var(--line);padding:var(--s4)}.summary-card h3{margin-top:0}.empty{padding:var(--s6);text-align:center;color:var(--muted);border:var(--border) dashed var(--line)}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+@media(max-width:720px){.hero{display:block;padding:var(--s5) var(--s4)}.hero h1{font-size:var(--f3)}.toolbar{justify-content:flex-start;margin-top:var(--s4)}.stats{grid-template-columns:repeat(2,1fr)}.form-grid,.summary-grid{grid-template-columns:1fr}.wide{grid-column:auto}.section-head,.task header{display:block}.task dl{grid-template-columns:1fr 1fr}.toolbar button,.actions button{width:100%}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+<!-- Generated from local source; core.js:b01479846a55bdbd52cc70d9d3d69aecae987887db1fc64c6f95638008b3ba5d sample-data.js:fde9ea3608f132169eb337a78431c64309b681bab580915bdf3f87b0e550e57c app.js:4d28cce9c2579bd3942c1175c15bdbfa5a74bbc343404455d4e564dc504f7a40 -->
+</head>
+<body>
+<header class="hero">
+  <div><p class="kicker">本机记录 · 不联网</p><h1>AI 单任务投入账本</h1><p>把人工时间、返工、API 费用和订阅额度分开记录。第一步：新增一个已做过的任务，写清可观察的验收条件。</p></div>
+  <div class="toolbar" role="group" aria-label="数据操作">
+    <button id="load-sample" type="button">载入合成示例</button><button id="export-json" type="button">导出 JSON 备份</button>
+    <button id="pick-import" type="button">导入 JSON 备份</button><input id="import-file" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1">
+    <button id="clear-all" class="danger" type="button">清空全部任务</button>
+  </div>
+</header>
+<main>
+  <p id="today-banner" class="banner" hidden></p>
+  <p id="sample-banner" class="banner warning" hidden>账本中含合成示例。每条任务会单独标记身份，导出文件会保留该标记。</p>
+  <div id="storage-warning" class="banner danger" hidden><p id="storage-warning-text"></p><div class="actions"><button id="export-corrupt" class="danger" type="button" hidden>下载损坏的原始存储文本</button><button id="export-recovery" class="danger" type="button">导出当前内存与有效草稿 JSON 备份</button></div></div>
+  <p id="status" class="banner" role="status" hidden></p>
+  <section id="confirm-panel" class="panel confirm" role="alertdialog" aria-labelledby="confirm-text" hidden>
+    <p id="confirm-text"></p><div class="actions"><button id="confirm-yes" class="danger" type="button">确认</button><button id="confirm-no" type="button">取消</button></div>
+  </section>
+  <section id="import-panel" class="panel" hidden>
+    <h2>确认导入 JSON 备份</h2><p id="import-preview"></p><div class="actions"><button id="import-confirm" type="button">确认替换当前数据</button><button id="import-cancel" type="button">取消导入</button></div>
+  </section>
+
+  <section class="stats" aria-label="账本总览">
+    <article><span>本人 / 全部任务</span><strong id="stat-tasks">0 / 0</strong><small>合成示例不进入指标</small></article>
+    <article><span>本人记录验收通过</span><strong id="stat-passed">0</strong><small>结果为“通过”</small></article>
+    <article><span>本人记录 API 费用未知</span><strong id="stat-unknown">0</strong><small>未知不会按 0 计算</small></article>
+    <article><span>本人记录总分钟</span><strong id="stat-minutes">0</strong><small>工作 + 返工</small></article>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><div><h2 id="form-title">新增任务</h2><p>返工分钟只填修复、重做和复验，不要重复计入工作分钟。</p></div><button id="reset-form" type="button">重置表单</button></div>
+    <form id="task-form" novalidate autocomplete="off">
+      <div class="form-grid">
+        <label>任务名<input id="name" maxlength="200" required></label>
+        <label>任务类型<input id="type" maxlength="120" required placeholder="例如：HTML 交付"></label>
+        <label>日期<input id="date" type="date" required></label>
+        <label>使用的模型<input id="model" maxlength="120" required></label>
+        <label class="wide">可观察的验收条件<textarea id="acceptance" maxlength="1000" rows="2" required></textarea></label>
+        <label>结果<select id="outcome"><option value="pending">待验收</option><option value="passed">通过</option><option value="failed">未通过</option></select></label>
+        <label>工作分钟<input id="work-minutes" type="number" min="0" max="1000000" step="1" value="0" required></label>
+        <label>返工分钟<input id="rework-minutes" type="number" min="0" max="1000000" step="1" value="0" required></label>
+      </div>
+      <fieldset><legend>API 费用</legend><p class="hint">没有账单或无法确认时选“未知”。未知不会被计为 0。</p>
+        <label class="check"><input id="api-known" type="checkbox">我知道这项任务的 API 费用</label>
+        <div id="api-fields" class="form-grid" hidden><label>费用金额<input id="api-amount" inputmode="decimal" placeholder="0.00"></label><label>币种<input id="api-currency" maxlength="3" value="USD"></label></div>
+      </fieldset>
+      <fieldset><legend>订阅额度观察</legend><p class="hint">只记录页面显示的前后值。百分点、token、请求数和金额不是同一种单位，账本不会自动换算。</p>
+        <label class="check"><input id="usage-known" type="checkbox">我记录了同一额度窗口的前后值</label>
+        <div id="usage-fields" class="form-grid" hidden>
+          <label>单位<select id="usage-unit"><option value="percentage_points">百分点</option><option value="tokens">token</option><option value="requests">请求数</option><option value="credits">额度点数</option><option value="minutes">分钟</option><option value="other">其他</option></select></label>
+          <label id="unit-label-wrap" hidden>自定义单位<input id="unit-label" maxlength="80"></label>
+          <label>观察前<input id="usage-before" inputmode="decimal"></label><label>观察后<input id="usage-after" inputmode="decimal"></label>
+          <label class="wide">额度窗口<input id="window-label" maxlength="200" placeholder="例如：2026-10-29 当日窗口"></label>
+          <label class="check"><input id="usage-comparable" type="checkbox" checked>前后值来自可比较的同一窗口</label>
+          <label class="check"><input id="usage-reset" type="checkbox">观察期间窗口发生重置</label>
+        </div>
+      </fieldset>
+      <fieldset><legend>人工成本估算（可选）</legend><p class="hint">时薪必须由你明确填写。账本只计算同币种金额，不自动换汇。</p>
+        <label class="check"><input id="wage-known" type="checkbox">使用人工时薪估算</label>
+        <div id="wage-fields" class="form-grid" hidden><label>时薪金额<input id="wage-amount" inputmode="decimal"></label><label>币种<input id="wage-currency" maxlength="3" value="CNY"></label></div>
+      </fieldset>
+      <label>备注<textarea id="notes" maxlength="1000" rows="2"></textarea></label>
+      <p id="form-error" class="error" role="alert" tabindex="-1" hidden></p>
+      <p id="dirty-note" class="hint" hidden>表单有未保存内容。导入、载入示例和导出前请先保存或重置。</p>
+      <div class="actions"><button id="save-task" type="submit">保存任务</button><button id="cancel-edit" type="button" hidden>取消编辑</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><div><h2>任务记录</h2><p>筛选只改变屏幕显示，不改变导出内容。</p></div><label>筛选结果<select id="filter"><option value="all">全部</option><option value="pending">待验收</option><option value="passed">通过</option><option value="failed">未通过</option></select></label></div>
+    <div id="task-list" class="task-list"></div>
+  </section>
+
+  <section class="panel"><h2>费用与同类任务观察</h2><p class="hint">同类任务只统计“验收通过”记录的总耗时中位数，并显示样本数。这是描述性结果，不证明 AI 造成了节省。</p><div id="summary"></div></section>
+  <section class="panel"><h2>导出报告</h2><p>JSON 用于完整备份；CSV 用于表格分析；Markdown 保留口径、样本数和任务明细。</p><div class="actions"><button id="export-csv" type="button">导出任务明细 CSV</button><button id="export-md" type="button">导出任务成本报告 Markdown</button></div></section>
+</main>
+<script>
+(function (root) {
+  'use strict';
+  var VERSION = 1;
+  var OUTCOMES = ['pending', 'passed', 'failed'];
+  var USAGE_UNITS = ['percentage_points', 'tokens', 'requests', 'credits', 'minutes', 'other'];
+  var MAX_TEXT = 1000;
+  var MAX_MINUTES = 1000000;
+  var MAX_CENTS = 1000000000000;
+
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function obj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+  function validDate(v) {
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    var p = v.split('-').map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    return d.getUTCFullYear() === p[0] && d.getUTCMonth() === p[1] - 1 && d.getUTCDate() === p[2];
+  }
+  function text(v, label, max, empty) {
+    if (typeof v !== 'string') return label + '必须是文本';
+    if (!empty && !v.trim()) return label + '不能为空';
+    if (v.length > max) return label + '不能超过 ' + max + ' 个字符';
+    return null;
+  }
+  function validId(v) { return typeof v === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(v); }
+  function validCurrency(v) { return typeof v === 'string' && /^[A-Z]{3}$/.test(v); }
+  function validMinutes(v) { return Number.isInteger(v) && v >= 0 && v <= MAX_MINUTES; }
+  function validFinite(v) { return typeof v === 'number' && Number.isFinite(v); }
+
+  function validateApi(api) {
+    if (api === null) return null;
+    if (!obj(api)) return 'API 费用必须为空或对象';
+    if (!validCurrency(api.currency)) return 'API 费用币种必须是 3 位大写字母';
+    if (!Number.isSafeInteger(api.amountCents) || api.amountCents < 0 || api.amountCents > MAX_CENTS) return 'API 费用必须是非负、有限且以分为单位的整数';
+    return null;
+  }
+  function validateWage(wage) {
+    if (wage === null) return null;
+    if (!obj(wage)) return '人工时薪必须为空或对象';
+    if (!validCurrency(wage.currency)) return '人工时薪币种必须是 3 位大写字母';
+    if (!Number.isSafeInteger(wage.centsPerHour) || wage.centsPerHour < 0 || wage.centsPerHour > MAX_CENTS) return '人工时薪必须是非负、有限且以分为单位的整数';
+    return null;
+  }
+  function validateUsage(u) {
+    if (u === null) return null;
+    if (!obj(u)) return '订阅额度观察必须为空或对象';
+    if (USAGE_UNITS.indexOf(u.unit) < 0) return '订阅额度单位不支持';
+    if (!validFinite(u.before) || !validFinite(u.after) || u.before < 0 || u.after < 0) return '订阅额度前后值必须是非负有限数字';
+    if (typeof u.comparable !== 'boolean' || typeof u.reset !== 'boolean') return '订阅额度的可比和重置标记必须是布尔值';
+    var e = text(u.windowLabel, '额度窗口', 200, false); if (e) return e;
+    e = text(u.unitLabel || '', '自定义单位', 80, u.unit !== 'other'); if (e) return e;
+    return null;
+  }
+  function validateTask(t) {
+    if (!obj(t)) return '任务必须是对象';
+    if (own(t, 'synthetic') && typeof t.synthetic !== 'boolean') return 'synthetic 必须是布尔值';
+    if (!validId(t.id)) return 'id 必须是 1–64 位字母、数字、下划线或连字符';
+    var e = text(t.name, '任务名', 200, false); if (e) return e;
+    e = text(t.type, '任务类型', 120, false); if (e) return e;
+    e = text(t.model, '模型', 120, false); if (e) return e;
+    e = text(t.acceptance, '验收条件', MAX_TEXT, false); if (e) return e;
+    e = text(t.notes || '', '备注', MAX_TEXT, true); if (e) return e;
+    if (!validDate(t.date)) return '日期必须是真实存在的 YYYY-MM-DD';
+    if (OUTCOMES.indexOf(t.outcome) < 0) return '结果必须是 pending / passed / failed';
+    if (!validMinutes(t.workMinutes) || !validMinutes(t.reworkMinutes)) return '工作和返工分钟必须是 0–' + MAX_MINUTES + ' 的整数';
+    e = validateApi(t.api); if (e) return e;
+    e = validateWage(t.wage); if (e) return e;
+    e = validateUsage(t.subscriptionUsage); if (e) return e;
+    return null;
+  }
+  function cleanTask(t) {
+    return {
+      id: t.id, name: t.name.trim(), type: t.type.trim(), date: t.date, model: t.model.trim(),
+      acceptance: t.acceptance.trim(), outcome: t.outcome, workMinutes: t.workMinutes,
+      reworkMinutes: t.reworkMinutes, api: t.api === null ? null : { currency: t.api.currency, amountCents: t.api.amountCents },
+      subscriptionUsage: t.subscriptionUsage === null ? null : {
+        unit: t.subscriptionUsage.unit, unitLabel: (t.subscriptionUsage.unitLabel || '').trim(),
+        before: t.subscriptionUsage.before, after: t.subscriptionUsage.after,
+        windowLabel: t.subscriptionUsage.windowLabel.trim(), comparable: t.subscriptionUsage.comparable,
+        reset: t.subscriptionUsage.reset
+      },
+      wage: t.wage === null ? null : { currency: t.wage.currency, centsPerHour: t.wage.centsPerHour },
+      notes: (t.notes || '').trim(), synthetic: own(t, 'synthetic') ? t.synthetic : false
+    };
+  }
+  function emptyState() { return { version: VERSION, synthetic: false, tasks: [] }; }
+  function validateState(raw) {
+    if (!obj(raw)) return { ok: false, error: '备份内容必须是对象' };
+    if (raw.version !== VERSION) return { ok: false, error: '不支持的版本号' };
+    if (typeof raw.synthetic !== 'boolean') return { ok: false, error: 'synthetic 必须是布尔值' };
+    if (!Array.isArray(raw.tasks) || raw.tasks.length > 10000) return { ok: false, error: 'tasks 必须是最多 10000 条的数组' };
+    var ids = new Set(), tasks = [];
+    for (var i = 0; i < raw.tasks.length; i++) {
+      var e = validateTask(raw.tasks[i]);
+      if (e) return { ok: false, error: '任务 #' + (i + 1) + '：' + e };
+      if (ids.has(raw.tasks[i].id)) return { ok: false, error: '任务 #' + (i + 1) + '：id 重复' };
+      ids.add(raw.tasks[i].id);
+      var cleaned = cleanTask(raw.tasks[i]);
+      if (!own(raw.tasks[i], 'synthetic')) cleaned.synthetic = raw.synthetic;
+      tasks.push(cleaned);
+    }
+    return { ok: true, data: { version: VERSION, synthetic: tasks.some(function (t) { return t.synthetic; }), tasks: tasks } };
+  }
+  function validateImport(input) {
+    var raw = input;
+    if (typeof input === 'string') { try { raw = JSON.parse(input); } catch (e) { return { ok: false, error: '不是合法 JSON：' + e.message }; } }
+    return validateState(raw);
+  }
+  function median(xs) {
+    if (!xs.length) return null;
+    var a = xs.slice().sort(function (x, y) { return x - y; }), m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+  function summarize(state) {
+    var cost = new Map(), unknownApi = 0, human = new Map(), unknownWage = 0, groups = new Map();
+    var real = state.tasks.filter(function (t) { return !t.synthetic; });
+    real.forEach(function (t) {
+      if (t.api === null) unknownApi++; else cost.set(t.api.currency, (cost.get(t.api.currency) || 0) + t.api.amountCents);
+      if (t.wage !== null) {
+        var hc = Math.round((t.workMinutes + t.reworkMinutes) * t.wage.centsPerHour / 60);
+        human.set(t.wage.currency, (human.get(t.wage.currency) || 0) + hc);
+      } else unknownWage++;
+      if (!groups.has(t.type)) groups.set(t.type, { type: t.type, total: 0, passed: 0, minutes: [] });
+      var g = groups.get(t.type); g.total++;
+      if (t.outcome === 'passed') { g.passed++; g.minutes.push(t.workMinutes + t.reworkMinutes); }
+    });
+    function list(map) { return Array.from(map).sort().map(function (x) { return { currency: x[0], cents: x[1] }; }); }
+    return {
+      tasks: state.tasks.length, realTasks: real.length, syntheticTasks: state.tasks.length - real.length,
+      passed: real.filter(function (t) { return t.outcome === 'passed'; }).length,
+      apiByCurrency: list(cost), unknownApi: unknownApi, humanByCurrency: list(human), unknownWage: unknownWage,
+      comparisons: Array.from(groups.values()).sort(function (a, b) { return a.type.localeCompare(b.type, 'zh-CN'); }).map(function (g) {
+        return { type: g.type, total: g.total, passed: g.passed, medianPassedMinutes: median(g.minutes) };
+      })
+    };
+  }
+  function usageDelta(u) {
+    if (!u) return { status: 'unknown', delta: null };
+    if (u.reset) return { status: 'reset', delta: null };
+    if (!u.comparable) return { status: 'incomparable', delta: null };
+    return { status: 'observed', delta: u.after - u.before, unit: u.unit, unitLabel: u.unitLabel || '' };
+  }
+  function csvSafe(v) {
+    var s = String(v === null || v === undefined ? '' : v);
+    if (/^[\s\x00-\x1f]*[=+\-@]/.test(s) && s.trim() !== '-' && s.trim() !== '+') s = "'" + s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  function exportCsv(state) {
+    var rows = [['任务ID','示例身份','任务名','类型','日期','模型','验收条件','结果','工作分钟','返工分钟','API费用','API币种','额度单位','额度前值','额度后值','额度窗口','额度可比','额度重置','人工时薪','时薪币种','备注']];
+    state.tasks.forEach(function (t) { rows.push([
+      t.id,t.synthetic?'合成示例':'本人记录',t.name,t.type,t.date,t.model,t.acceptance,t.outcome,t.workMinutes,t.reworkMinutes,
+      t.api === null ? '未知' : (t.api.amountCents / 100).toFixed(2), t.api === null ? '' : t.api.currency,
+      t.subscriptionUsage ? (t.subscriptionUsage.unit === 'other' ? t.subscriptionUsage.unitLabel : t.subscriptionUsage.unit) : '',
+      t.subscriptionUsage ? t.subscriptionUsage.before : '', t.subscriptionUsage ? t.subscriptionUsage.after : '',
+      t.subscriptionUsage ? t.subscriptionUsage.windowLabel : '', t.subscriptionUsage ? t.subscriptionUsage.comparable : '',
+      t.subscriptionUsage ? t.subscriptionUsage.reset : '', t.wage ? (t.wage.centsPerHour / 100).toFixed(2) : '',
+      t.wage ? t.wage.currency : '', t.notes
+    ]); });
+    return '\ufeff' + rows.map(function (r) { return r.map(csvSafe).join(','); }).join('\n');
+  }
+  function exportMarkdown(state) {
+    var s = summarize(state), out = ['# AI 单任务投入报告','', state.synthetic ? '> 报告含合成示例；每条任务单独标记身份。' : '> 本报告来自本机手工记录。', '',
+      '- 本人记录：' + s.realTasks + ' 项；合成示例：' + s.syntheticTasks + ' 项', '- 本人记录中验收通过：' + s.passed, '- 本人记录中 API 费用未知：' + s.unknownApi + ' 项',
+      '- 说明：API 费用、人工估算和订阅额度是三种独立口径，不互相换算。', '', '## 按币种汇总', ''];
+    if (!s.apiByCurrency.length) out.push('- 没有已知 API 费用。');
+    s.apiByCurrency.forEach(function (x) { out.push('- API ' + x.currency + ' ' + (x.cents / 100).toFixed(2)); });
+    s.humanByCurrency.forEach(function (x) { out.push('- 人工估算 ' + x.currency + ' ' + (x.cents / 100).toFixed(2)); });
+    out.push('- 人工时薪未知：' + s.unknownWage + ' 项');
+    out.push('', '## 同类任务观察', '', '> 仅统计验收通过任务的总耗时中位数。这是描述性记录，不证明 AI 造成了节省。');
+    s.comparisons.forEach(function (g) { out.push('- ' + g.type + '：全部 ' + g.total + ' 项，通过 ' + g.passed + ' 项；通过样本中位总耗时 ' + (g.medianPassedMinutes === null ? '无法计算' : g.medianPassedMinutes + ' 分钟')); });
+    out.push('', '## 任务明细', '');
+    state.tasks.forEach(function (t) {
+      var u = usageDelta(t.subscriptionUsage);
+      out.push('### ' + t.name, '', '- 身份：' + (t.synthetic ? '合成示例' : '本人记录'), '- 日期：' + t.date, '- 类型：' + t.type, '- 模型：' + t.model,
+        '- 验收条件：' + t.acceptance, '- 结果：' + t.outcome, '- 工作 / 返工：' + t.workMinutes + ' / ' + t.reworkMinutes + ' 分钟',
+        '- API 费用：' + (t.api ? t.api.currency + ' ' + (t.api.amountCents / 100).toFixed(2) : '未知'),
+        '- 额度观察：' + (u.status === 'observed' ? String(u.delta) + ' ' + (u.unit === 'percentage_points' ? '百分点' : (u.unitLabel || u.unit)) : (u.status === 'unknown' ? '未记录' : (u.status === 'reset' ? '窗口已重置，不可比较' : '窗口不可比'))),
+        '- 备注：' + (t.notes || '无'), '');
+    });
+    return out.join('\n');
+  }
+  function parseMoney(v) {
+    var s = String(v).trim(); if (!/^\d+(?:\.\d{1,2})?$/.test(s)) return null;
+    var cents = Math.round(Number(s) * 100); return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null;
+  }
+  var api = { VERSION:VERSION, OUTCOMES:OUTCOMES, USAGE_UNITS:USAGE_UNITS, emptyState:emptyState, validDate:validDate,
+    validateTask:validateTask, validateState:validateState, validateImport:validateImport, summarize:summarize, usageDelta:usageDelta,
+    exportCsv:exportCsv, exportMarkdown:exportMarkdown, parseMoney:parseMoney, median:median };
+  root.TaskEffortCore = api; if (typeof module !== 'undefined') module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+(function (root) {
+  'use strict';
+  root.TaskEffortSample = {
+    version: 1, synthetic: true, tasks: [
+      { id:'sample_html_1', synthetic:true, name:'合成示例：响应式 HTML 验收', type:'HTML 交付', date:'2026-10-27', model:'示例模型 A', acceptance:'桌面、平板和 390px 手机无横向溢出，交互断网可用。', outcome:'passed', workMinutes:85, reworkMinutes:20, api:null,
+        subscriptionUsage:{unit:'percentage_points',unitLabel:'',before:62,after:57,windowLabel:'同一周额度窗口',comparable:true,reset:false}, wage:{currency:'CNY',centsPerHour:20000}, notes:'虚构数据，用于演示“未知费用不按 0 处理”。' },
+      { id:'sample_copy_1', synthetic:true, name:'合成示例：短文校对', type:'内容校对', date:'2026-10-28', model:'示例模型 B', acceptance:'检查清单中的 12 项均给出证据，未发现项也标注检查范围。', outcome:'passed', workMinutes:30, reworkMinutes:5, api:{currency:'USD',amountCents:42},
+        subscriptionUsage:{unit:'requests',unitLabel:'',before:100,after:94,windowLabel:'当日请求窗口',comparable:false,reset:true}, wage:null, notes:'额度在观察期间重置，因此前后值不比较。' },
+      { id:'sample_debug_1', synthetic:true, name:'合成示例：脚本故障排查', type:'故障排查', date:'2026-10-29', model:'示例模型 A', acceptance:'复现失败用例通过，旧用例保持通过。', outcome:'pending', workMinutes:55, reworkMinutes:0, api:{currency:'USD',amountCents:18}, subscriptionUsage:null, wage:{currency:'CNY',centsPerHour:20000}, notes:'仍待最终验收，不进入通过样本的耗时中位数。' }
+    ]
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+(function () {
+  'use strict';
+  var C = globalThis.TaskEffortCore, KEY = 'taskEffortLedger.v1', RECOVERY_PREFIX = 'taskEffortLedger.corruptBackup.v1.';
+  var state = C.emptyState(), editingId = null, pendingImport = null, pendingAction = null, dirty = false, corruptRaw = null;
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+  function today() {
+    var q = new URLSearchParams(location.search).get('today');
+    if (q && C.validDate(q)) { $('today-banner').textContent = '基准日 ' + q + '（由地址参数固定）'; $('today-banner').hidden = false; return q; }
+    return new Date().toISOString().slice(0,10);
+  }
+  function load() {
+    try { var raw = localStorage.getItem(KEY); if (!raw) return; var v = C.validateImport(raw); if (!v.ok) { corruptRaw=raw; throw new Error(v.error); } state = v.data; }
+    catch (e) { warnStorage('浏览器中的已保存数据无法读取：' + e.message + '。当前内存数据仍可导出。'); }
+  }
+  function syncSynthetic() { state.synthetic = state.tasks.some(function (t) { return t.synthetic === true; }); }
+  function save() {
+    syncSynthetic();
+    try {
+      if (corruptRaw !== null) localStorage.setItem(RECOVERY_PREFIX + Date.now(), corruptRaw);
+      localStorage.setItem(KEY, JSON.stringify(state));
+      corruptRaw=null; $('storage-warning').hidden = true; return true;
+    }
+    catch (e) { warnStorage('保存失败：' + e.message + '。请立即导出 JSON 备份；当前内存中的有效数据仍会完整导出。'); return false; }
+  }
+  function warnStorage(msg) { $('storage-warning-text').textContent = msg; $('export-corrupt').hidden = corruptRaw === null; $('storage-warning').hidden = false; }
+  function flash(msg) { $('status').textContent = msg; $('status').hidden = false; setTimeout(function(){ $('status').hidden = true; }, 3500); }
+  function setDirty(v) { dirty = v; $('dirty-note').hidden = !v; }
+  function money(cents) { return (cents / 100).toFixed(2); }
+  function unitName(u) { return {percentage_points:'百分点',tokens:'token',requests:'请求数',credits:'额度点数',minutes:'分钟',other:u.unitLabel}[u.unit] || u.unit; }
+  function outcomeName(x) { return {pending:'待验收',passed:'通过',failed:'未通过'}[x]; }
+  function requiredNumber(id) { var v=$(id).value.trim(); return v === '' ? NaN : Number(v); }
+  function blockIfDirty() { if (!dirty) return false; showError('表单有未保存内容。请先保存或重置表单。'); return true; }
+  function showError(msg) { $('form-error').textContent = msg; $('form-error').hidden = false; $('form-error').focus(); }
+  function hideError() { $('form-error').hidden = true; }
+  function ask(text, action) { pendingAction = action; $('confirm-text').textContent = text; $('confirm-panel').hidden = false; $('confirm-yes').focus(); }
+  function closeAsk() { pendingAction = null; $('confirm-panel').hidden = true; }
+  function download(name, content, type) { var a=document.createElement('a'), url=URL.createObjectURL(new Blob([content],{type:type})); a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},0); }
+  function render() {
+    var s = C.summarize(state), filter = $('filter').value;
+    $('stat-tasks').textContent = s.realTasks+' / '+s.tasks; $('stat-passed').textContent = s.passed; $('stat-unknown').textContent = s.unknownApi;
+    $('stat-minutes').textContent = state.tasks.filter(function(t){return !t.synthetic;}).reduce(function(n,t){return n+t.workMinutes+t.reworkMinutes;},0);
+    $('sample-banner').hidden = !state.synthetic;
+    var list = $('task-list'); list.replaceChildren();
+    var shown = state.tasks.filter(function(t){ return filter === 'all' || t.outcome === filter; });
+    if (!shown.length) list.appendChild(el('p','empty',state.tasks.length ? '当前筛选没有记录。' : '还没有任务。新增第一项，或载入合成示例查看流程。'));
+    shown.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).forEach(function(t){ list.appendChild(taskCard(t)); });
+    renderSummary(s);
+  }
+  function taskCard(t) {
+    var a=el('article','task'), h=el('header'), title=el('div'); title.append(el('h3','',t.name),el('span','hint',t.date+' · '+t.type+' · '+outcomeName(t.outcome))); h.appendChild(title);
+    var btns=el('div','actions'), edit=el('button','', '编辑'), del=el('button','danger','删除'); edit.type=del.type='button';
+    edit.addEventListener('click',function(){fillForm(t);}); del.addEventListener('click',function(){ ask('删除“'+t.name+'”？该任务的时间、费用和额度观察会一并删除。',function(){state.tasks=state.tasks.filter(function(x){return x.id!==t.id;});state.synthetic=false;save();render();flash('已删除任务。');});}); btns.append(edit,del);h.appendChild(btns);a.appendChild(h);
+    var dl=el('dl'); [['身份',t.synthetic?'合成示例':'本人记录'],['模型',t.model],['工作 / 返工',t.workMinutes+' / '+t.reworkMinutes+' 分钟'],['API 费用',t.api?t.api.currency+' '+money(t.api.amountCents):'未知（未计为 0）']].forEach(function(x){dl.append(el('div','', ''),);var d=dl.lastChild;d.append(el('dt','',x[0]),el('dd','',x[1]));});
+    a.append(dl,el('p','acceptance','验收条件：'+t.acceptance));
+    if(t.subscriptionUsage){var u=C.usageDelta(t.subscriptionUsage), value=u.status==='observed'?String(u.delta)+' '+unitName(t.subscriptionUsage):(u.status==='reset'?'窗口已重置，不比较':'窗口不可比，不比较');a.appendChild(el('p','hint','订阅额度：'+value+'；窗口：'+t.subscriptionUsage.windowLabel+'。此数值不换算成金额。'));}
+    if(t.notes)a.appendChild(el('p','hint','备注：'+t.notes));return a;
+  }
+  function renderSummary(s) {
+    var root=$('summary');root.replaceChildren();var grid=el('div','summary-grid'), cost=el('article','summary-card'), comp=el('article','summary-card');cost.appendChild(el('h3','','费用汇总（按币种分开）'));
+    if(!s.apiByCurrency.length)cost.appendChild(el('p','hint','没有已知 API 费用；未知项保持未知。'));
+    s.apiByCurrency.forEach(function(x){cost.appendChild(el('p','', 'API '+x.currency+' '+money(x.cents)));});
+    s.humanByCurrency.forEach(function(x){cost.appendChild(el('p','', '人工估算 '+x.currency+' '+money(x.cents)));});
+    cost.appendChild(el('p','hint','以下只统计 '+s.realTasks+' 条本人记录；另有 '+s.syntheticTasks+' 条合成示例不进入指标。API 费用未知 '+s.unknownApi+' 项；人工时薪未知 '+s.unknownWage+' 项。已知金额按币种分别显示，不把未知补成 0。'));
+    comp.appendChild(el('h3','','同类任务通过样本')); if(!s.comparisons.length)comp.appendChild(el('p','hint','还没有可比较记录。'));
+    s.comparisons.forEach(function(g){comp.appendChild(el('p','',g.type+'：全部 '+g.total+' 项，通过 '+g.passed+' 项；通过样本总耗时中位数 '+(g.medianPassedMinutes===null?'无法计算':g.medianPassedMinutes+' 分钟')));});
+    grid.append(cost,comp);root.appendChild(grid);
+  }
+  function formValue() {
+    var id=editingId || ('task_'+Date.now().toString(36)), api=null, usage=null, wage=null;
+    if($('api-known').checked){var ac=C.parseMoney($('api-amount').value);api={amountCents:ac,currency:$('api-currency').value.trim().toUpperCase()};}
+    if($('usage-known').checked) usage={unit:$('usage-unit').value,unitLabel:$('unit-label').value, before:requiredNumber('usage-before'),after:requiredNumber('usage-after'),windowLabel:$('window-label').value,comparable:$('usage-comparable').checked,reset:$('usage-reset').checked};
+    if($('wage-known').checked) wage={centsPerHour:C.parseMoney($('wage-amount').value),currency:$('wage-currency').value.trim().toUpperCase()};
+    var existing=editingId ? state.tasks.find(function(t){return t.id===editingId;}) : null;
+    return {id:id,synthetic:existing ? existing.synthetic===true : false,name:$('name').value,type:$('type').value,date:$('date').value,model:$('model').value,acceptance:$('acceptance').value,outcome:$('outcome').value,workMinutes:requiredNumber('work-minutes'),reworkMinutes:requiredNumber('rework-minutes'),api:api,subscriptionUsage:usage,wage:wage,notes:$('notes').value};
+  }
+  function recoveryState() {
+    var copy=JSON.parse(JSON.stringify(state));
+    if (dirty) {
+      var draft=formValue(), err=C.validateTask(draft);
+      if (!err) { var i=copy.tasks.findIndex(function (t) { return t.id===draft.id; }); if(i>=0)copy.tasks[i]=draft; else copy.tasks.push(draft); }
+    }
+    copy.synthetic=copy.tasks.some(function(t){return t.synthetic===true;});
+    var checked=C.validateState(copy); return checked.ok ? checked.data : state;
+  }
+  function resetForm() { editingId=null;$('task-form').reset();$('date').value=today();$('work-minutes').value='0';$('rework-minutes').value='0';$('api-currency').value='USD';$('wage-currency').value='CNY';$('usage-comparable').checked=true;toggleFields();$('form-title').textContent='新增任务';$('save-task').textContent='保存任务';$('cancel-edit').hidden=true;hideError();setDirty(false); }
+  function fillForm(t){editingId=t.id;$('name').value=t.name;$('type').value=t.type;$('date').value=t.date;$('model').value=t.model;$('acceptance').value=t.acceptance;$('outcome').value=t.outcome;$('work-minutes').value=t.workMinutes;$('rework-minutes').value=t.reworkMinutes;$('api-known').checked=!!t.api;if(t.api){$('api-amount').value=money(t.api.amountCents);$('api-currency').value=t.api.currency;}$('usage-known').checked=!!t.subscriptionUsage;if(t.subscriptionUsage){$('usage-unit').value=t.subscriptionUsage.unit;$('unit-label').value=t.subscriptionUsage.unitLabel;$('usage-before').value=t.subscriptionUsage.before;$('usage-after').value=t.subscriptionUsage.after;$('window-label').value=t.subscriptionUsage.windowLabel;$('usage-comparable').checked=t.subscriptionUsage.comparable;$('usage-reset').checked=t.subscriptionUsage.reset;}$('wage-known').checked=!!t.wage;if(t.wage){$('wage-amount').value=money(t.wage.centsPerHour);$('wage-currency').value=t.wage.currency;}$('notes').value=t.notes;toggleFields();$('form-title').textContent='编辑任务';$('save-task').textContent='保存修改';$('cancel-edit').hidden=false;setDirty(false);$('form-title').scrollIntoView({behavior:'smooth'});}
+  function toggleFields(){$('api-fields').hidden=!$('api-known').checked;$('usage-fields').hidden=!$('usage-known').checked;$('wage-fields').hidden=!$('wage-known').checked;$('unit-label-wrap').hidden=$('usage-unit').value!=='other';}
+  $('task-form').addEventListener('submit',function(e){e.preventDefault();var t=formValue(),err=C.validateTask(t);if(err){showError(err);return;}var i=state.tasks.findIndex(function(x){return x.id===t.id;});if(i>=0)state.tasks[i]=t;else state.tasks.push(t);var persisted=save();resetForm();render();flash(persisted?'任务已保存到浏览器。':'任务仅保留在当前页面内存，请立即导出恢复 JSON。');});
+  $('task-form').addEventListener('input',function(){setDirty(true);toggleFields();});
+  $('reset-form').addEventListener('click',resetForm);$('cancel-edit').addEventListener('click',resetForm);$('filter').addEventListener('change',render);
+  $('confirm-yes').addEventListener('click',function(){var f=pendingAction;closeAsk();if(f)f();});$('confirm-no').addEventListener('click',closeAsk);
+  $('load-sample').addEventListener('click',function(){if(blockIfDirty())return;ask('载入 3 条合成示例会替换当前 '+state.tasks.length+' 条任务。',function(){var v=C.validateState(globalThis.TaskEffortSample);state=v.data;save();render();flash('已载入合成示例。');});});
+  $('clear-all').addEventListener('click',function(){if(blockIfDirty())return;ask('清空全部 '+state.tasks.length+' 条任务？请先导出 JSON 备份。',function(){state=C.emptyState();save();render();flash('已清空全部任务。');});});
+  $('export-json').addEventListener('click',function(){if(blockIfDirty())return;download('ai-task-effort-ledger.json',JSON.stringify(state,null,2),'application/json');});
+  $('export-csv').addEventListener('click',function(){if(blockIfDirty())return;download('ai-task-effort-ledger.csv',C.exportCsv(state),'text/csv');});
+  $('export-md').addEventListener('click',function(){if(blockIfDirty())return;download('ai-task-effort-report.md',C.exportMarkdown(state),'text/markdown');});
+  $('export-corrupt').addEventListener('click',function(){if(corruptRaw!==null)download('ai-task-effort-ledger-corrupt-raw.txt',corruptRaw,'text/plain');});
+  $('export-recovery').addEventListener('click',function(){download('ai-task-effort-ledger-recovery.json',JSON.stringify(recoveryState(),null,2),'application/json');});
+  $('pick-import').addEventListener('click',function(){if(blockIfDirty())return;$('import-file').click();});
+  $('import-file').addEventListener('change',function(){var file=this.files[0];this.value='';if(!file)return;var r=new FileReader();r.onload=function(){var v=C.validateImport(String(r.result));if(!v.ok){flash('导入失败：'+v.error);return;}pendingImport=v.data;$('import-preview').textContent='备份包含 '+v.data.tasks.length+' 条任务，'+(v.data.synthetic?'其中含合成示例':'全部为本人记录')+'。确认后会替换当前 '+state.tasks.length+' 条任务。';$('import-panel').hidden=false;$('import-confirm').focus();};r.readAsText(file);});
+  $('import-confirm').addEventListener('click',function(){if(!pendingImport)return;state=pendingImport;pendingImport=null;$('import-panel').hidden=true;save();resetForm();render();flash('导入完成。');});$('import-cancel').addEventListener('click',function(){pendingImport=null;$('import-panel').hidden=true;});
+  load();today();resetForm();render();
+})();
+
+</script>
+</body>
+</html>
