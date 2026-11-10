@@ -1,13 +1,14 @@
 (function () {
   'use strict';
   var C = globalThis.TaskEffortCore, KEY = 'taskEffortLedger.v1', RECOVERY_PREFIX = 'taskEffortLedger.corruptBackup.v1.';
-  var state = C.emptyState(), editingId = null, pendingImport = null, pendingAction = null, dirty = false, corruptRaw = null;
+  var state = C.emptyState(), editingId = null, pendingImport = null, importSequence = 0, pendingAction = null, dirty = false, corruptRaw = null;
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function today() {
     var q = new URLSearchParams(location.search).get('today');
     if (q && C.validDate(q)) { $('today-banner').textContent = '基准日 ' + q + '（由地址参数固定）'; $('today-banner').hidden = false; return q; }
-    return new Date().toISOString().slice(0,10);
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
   function load() {
     try { var raw = localStorage.getItem(KEY); if (!raw) return; var v = C.validateImport(raw); if (!v.ok) { corruptRaw=raw; throw new Error(v.error); } state = v.data; }
@@ -86,10 +87,10 @@
   function resetForm() { editingId=null;$('task-form').reset();$('date').value=today();$('work-minutes').value='0';$('rework-minutes').value='0';$('api-currency').value='USD';$('wage-currency').value='CNY';$('usage-comparable').checked=true;toggleFields();$('form-title').textContent='新增任务';$('save-task').textContent='保存任务';$('cancel-edit').hidden=true;hideError();setDirty(false); }
   function fillForm(t){editingId=t.id;$('name').value=t.name;$('type').value=t.type;$('date').value=t.date;$('model').value=t.model;$('acceptance').value=t.acceptance;$('outcome').value=t.outcome;$('work-minutes').value=t.workMinutes;$('rework-minutes').value=t.reworkMinutes;$('api-known').checked=!!t.api;if(t.api){$('api-amount').value=money(t.api.amountCents);$('api-currency').value=t.api.currency;}$('usage-known').checked=!!t.subscriptionUsage;if(t.subscriptionUsage){$('usage-unit').value=t.subscriptionUsage.unit;$('unit-label').value=t.subscriptionUsage.unitLabel;$('usage-before').value=t.subscriptionUsage.before;$('usage-after').value=t.subscriptionUsage.after;$('window-label').value=t.subscriptionUsage.windowLabel;$('usage-comparable').checked=t.subscriptionUsage.comparable;$('usage-reset').checked=t.subscriptionUsage.reset;}$('wage-known').checked=!!t.wage;if(t.wage){$('wage-amount').value=money(t.wage.centsPerHour);$('wage-currency').value=t.wage.currency;}$('notes').value=t.notes;toggleFields();$('form-title').textContent='编辑任务';$('save-task').textContent='保存修改';$('cancel-edit').hidden=false;setDirty(false);$('form-title').scrollIntoView({behavior:'smooth'});}
   function toggleFields(){$('api-fields').hidden=!$('api-known').checked;$('usage-fields').hidden=!$('usage-known').checked;$('wage-fields').hidden=!$('wage-known').checked;$('unit-label-wrap').hidden=$('usage-unit').value!=='other';}
-  $('task-form').addEventListener('submit',function(e){e.preventDefault();var t=formValue(),err=C.validateTask(t);if(err){showError(err);return;}var i=state.tasks.findIndex(function(x){return x.id===t.id;});if(i>=0)state.tasks[i]=t;else state.tasks.push(t);var persisted=save();resetForm();render();flash(persisted?'任务已保存到浏览器。':'任务仅保留在当前页面内存，请立即导出恢复 JSON。');});
+  $('task-form').addEventListener('submit',function(e){e.preventDefault();var t=formValue(),err=C.validateTask(t);if(err){showError(err);return;}var i=state.tasks.findIndex(function(x){return x.id===t.id;});if(i<0&&state.tasks.length>=C.MAX_TASKS){showError('任务数量已达 '+C.MAX_TASKS+' 条上限。请先导出备份并删除不再需要的任务。');return;}if(i>=0)state.tasks[i]=t;else state.tasks.push(t);var persisted=save();resetForm();render();flash(persisted?'任务已保存到浏览器。':'任务仅保留在当前页面内存，请立即导出恢复 JSON。');});
   $('task-form').addEventListener('input',function(){setDirty(true);toggleFields();});
   $('reset-form').addEventListener('click',resetForm);$('cancel-edit').addEventListener('click',resetForm);$('filter').addEventListener('change',render);
-  $('confirm-yes').addEventListener('click',function(){var f=pendingAction;closeAsk();if(f)f();});$('confirm-no').addEventListener('click',closeAsk);
+  $('confirm-yes').addEventListener('click',function(){if(blockIfDirty())return;var f=pendingAction;closeAsk();if(f)f();});$('confirm-no').addEventListener('click',closeAsk);
   $('load-sample').addEventListener('click',function(){if(blockIfDirty())return;ask('载入 3 条合成示例会替换当前 '+state.tasks.length+' 条任务。',function(){var v=C.validateState(globalThis.TaskEffortSample);state=v.data;save();render();flash('已载入合成示例。');});});
   $('clear-all').addEventListener('click',function(){if(blockIfDirty())return;ask('清空全部 '+state.tasks.length+' 条任务？请先导出 JSON 备份。',function(){state=C.emptyState();save();render();flash('已清空全部任务。');});});
   $('export-json').addEventListener('click',function(){if(blockIfDirty())return;download('ai-task-effort-ledger.json',JSON.stringify(state,null,2),'application/json');});
@@ -98,7 +99,19 @@
   $('export-corrupt').addEventListener('click',function(){if(corruptRaw!==null)download('ai-task-effort-ledger-corrupt-raw.txt',corruptRaw,'text/plain');});
   $('export-recovery').addEventListener('click',function(){download('ai-task-effort-ledger-recovery.json',JSON.stringify(recoveryState(),null,2),'application/json');});
   $('pick-import').addEventListener('click',function(){if(blockIfDirty())return;$('import-file').click();});
-  $('import-file').addEventListener('change',function(){var file=this.files[0];this.value='';if(!file)return;var r=new FileReader();r.onload=function(){var v=C.validateImport(String(r.result));if(!v.ok){flash('导入失败：'+v.error);return;}pendingImport=v.data;$('import-preview').textContent='备份包含 '+v.data.tasks.length+' 条任务，'+(v.data.synthetic?'其中含合成示例':'全部为本人记录')+'。确认后会替换当前 '+state.tasks.length+' 条任务。';$('import-panel').hidden=false;$('import-confirm').focus();};r.readAsText(file);});
-  $('import-confirm').addEventListener('click',function(){if(!pendingImport)return;state=pendingImport;pendingImport=null;$('import-panel').hidden=true;save();resetForm();render();flash('导入完成。');});$('import-cancel').addEventListener('click',function(){pendingImport=null;$('import-panel').hidden=true;});
+  function cancelImport() { importSequence++;pendingImport=null;$('import-panel').hidden=true; }
+  $('import-file').addEventListener('change',function(){
+    var file=this.files[0];this.value='';if(!file)return;
+    cancelImport();if(blockIfDirty())return;
+    var sequence=importSequence, r=new FileReader();
+    r.onload=function(){
+      if(sequence!==importSequence)return;
+      var v=C.validateImport(String(r.result));if(!v.ok){flash('导入失败：'+v.error);return;}
+      pendingImport=v.data;$('import-preview').textContent='备份包含 '+v.data.tasks.length+' 条任务，'+(v.data.synthetic?'其中含合成示例':'全部为本人记录')+'。确认后会替换当前 '+state.tasks.length+' 条任务。';$('import-panel').hidden=false;$('import-confirm').focus();
+    };
+    r.onerror=r.onabort=function(){if(sequence===importSequence){cancelImport();flash('导入失败：无法读取所选文件，请重新选择。');}};
+    r.readAsText(file);
+  });
+  $('import-confirm').addEventListener('click',function(){if(!pendingImport||blockIfDirty())return;state=pendingImport;cancelImport();save();resetForm();render();flash('导入完成。');});$('import-cancel').addEventListener('click',cancelImport);
   load();today();resetForm();render();
 })();

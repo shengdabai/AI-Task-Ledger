@@ -92,3 +92,20 @@ test('Markdown 明示三种口径不互换和非因果结论', () => {
 test('金额只接受最多两位小数和有限上限', () => {
   assert.equal(C.parseMoney('12.34'),1234); assert.equal(C.parseMoney('1.234'),null); assert.equal(C.parseMoney('-1'),null); assert.equal(C.parseMoney('Infinity'),null);
 });
+
+test('共享任务上限保持 10000 条并在导入时执行', () => {
+  assert.equal(C.MAX_TASKS,10000);
+  assert.equal(C.validateState(state(Array(C.MAX_TASKS+1).fill(task()))).ok,false);
+});
+
+
+test('Markdown 导出将用户内容保留为文字，不生成 HTML、链接或额外区块', () => {
+  const payload = '<img src=x onerror=alert(1)> & &#60;script&#62; ![link](https://example.invalid)\n# forged';
+  const usage = {unit:'other',unitLabel:payload.slice(0,80),before:2,after:1,windowLabel:'本周',comparable:true,reset:false};
+  const md = C.exportMarkdown(state([task({name:payload,type:payload,model:payload,acceptance:payload,notes:payload,subscriptionUsage:usage})]));
+  assert.equal(md.includes('<img'),false);
+  assert.equal(md.includes('![link]('),false);
+  assert.equal(md.includes('\n# forged'),false);
+  assert.equal(md.includes('&amp;\\#60;script&amp;\\#62;'),true);
+  assert.match(md,/&lt;img src=x onerror=alert/);
+});
