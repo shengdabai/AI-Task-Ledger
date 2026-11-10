@@ -1,20 +1,25 @@
 const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
-const { chromium } = require('/opt/homebrew/lib/node_modules/playwright');
+const { chromium } = require('playwright');
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
+  try { browser = await chromium.launch({headless:true}); }
   catch (first) {
-    browser = await chromium.launch({ executablePath: '~/.local/bin/chrome-headless-shell' });
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || path.join(os.homedir(), '.local', 'bin', 'chrome-headless-shell');
+    if (!fs.existsSync(executablePath)) throw first;
+    browser = await chromium.launch({ headless:true, executablePath });
     console.log('默认 Chromium 不可用，已使用 chrome-headless-shell 回退。');
   }
+  try {
   const context = await browser.newContext();
   const page = await context.newPage();
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-  const url = pathToFileURL(path.join(__dirname, '..', 'index.html')).href + '?today=2026-10-29';
+  const url = pathToFileURL(path.resolve(__dirname, '..', process.argv[2] || 'index.html')).href + '?today=2026-10-29';
   await page.goto(url);
   if (!await page.getByText('基准日 2026-10-29（由地址参数固定）').isVisible()) throw new Error('?today 标记未显示');
 
@@ -59,15 +64,46 @@ const { chromium } = require('/opt/homebrew/lib/node_modules/playwright');
   await page.locator('#import-file').setInputFiles(path.join(__dirname, 'valid-import.json'));
   if (!await page.getByText(/备份包含 1 条任务/).isVisible()) throw new Error('合法导入没有预览');
   if (await page.locator('.task').count() !== 3) throw new Error('确认前导入已改变数据');
+  await page.locator('#name').fill('导入预览后开始的草稿');
+  await page.getByRole('button', {name:'确认替换当前数据'}).click();
+  if (await page.locator('.task').count() !== 3 || await page.locator('#name').inputValue() !== '导入预览后开始的草稿') throw new Error('导入确认丢弃了未保存草稿');
+  await page.locator('#reset-form').click();
   await page.getByRole('button', {name:'确认替换当前数据'}).click();
   if (await page.locator('.task').count() !== 1 || !await page.getByText('导入验收任务').isVisible()) throw new Error('确认导入后数据不正确');
+
+  const raceContext = await browser.newContext();
+  await raceContext.addInitScript(() => {
+    window.readers = [];
+    window.FileReader = class { readAsText() { window.readers.push(this); } };
+  });
+  const race = await raceContext.newPage(); await race.goto(url);
+  const upload = () => race.locator('#import-file').setInputFiles(path.join(__dirname, 'valid-import.json'));
+  const rawImport = fs.readFileSync(path.join(__dirname, 'valid-import.json'), 'utf8');
+  await upload(); await upload();
+  await race.evaluate(raw => { readers[1].result=raw; readers[1].onload(); }, rawImport);
+  await race.evaluate(() => { readers[0].result='invalid JSON'; readers[0].onload(); });
+  if (await race.locator('#status').isVisible() || !await race.locator('#import-panel').isVisible()) throw new Error('过期文件读取覆盖了最新导入结果');
+  await upload();
+  if (await race.locator('#import-panel').isVisible()) throw new Error('新文件读取期间仍能确认旧备份');
+  await race.evaluate(() => readers[2].onerror());
+  if (!await race.getByText(/导入失败/).isVisible()) throw new Error('文件读取失败没有提示');
+  await race.evaluate(() => document.getElementById('import-confirm').click());
+  if (await race.locator('.task').count()) throw new Error('读取失败后仍能确认旧备份');
+  await upload();
+  await race.evaluate(raw => { readers[3].result=raw; readers[3].onload(); }, rawImport);
+  await race.locator('#import-cancel').click();
+  await race.evaluate(raw => { readers[3].result=raw; readers[3].onload(); }, rawImport);
+  if (await race.locator('#import-panel').isVisible()) throw new Error('取消导入后过期读取重新显示了预览');
+  await raceContext.close();
 
   for (const viewport of [{width:1440,height:900},{width:768,height:900},{width:390,height:844}]) {
     await page.setViewportSize(viewport);
     const metrics = await page.evaluate(() => ({scroll:document.documentElement.scrollWidth,inner:window.innerWidth,minButton:Math.min(...Array.from(document.querySelectorAll('button')).filter(x=>x.offsetParent).map(x=>x.getBoundingClientRect().height))}));
     if (metrics.scroll > metrics.inner) throw new Error(`${viewport.width}px 横向溢出：${metrics.scroll}>${metrics.inner}`);
     if (metrics.minButton < 36) throw new Error(`${viewport.width}px 按钮触控高度小于 36px`);
-    await page.screenshot({path:path.join(__dirname,'..','screenshots',`ledger-${viewport.width}.png`),fullPage:true});
+    const screenshotDir = process.env.LEDGER_SCREENSHOT_DIR || path.join(os.tmpdir(), 'ai-task-ledger-screenshots');
+    fs.mkdirSync(screenshotDir, {recursive:true});
+    await page.screenshot({path:path.join(screenshotDir,`ledger-${viewport.width}.png`),fullPage:true});
     console.log(`viewport ${viewport.width}x${viewport.height}: scrollWidth=${metrics.scroll}, minButton=${metrics.minButton}`);
   }
   if (errors.length) throw new Error(errors.join('\n'));
@@ -93,7 +129,6 @@ const { chromium } = require('/opt/homebrew/lib/node_modules/playwright');
   await broken.locator('#rework-minutes').fill('0');
   const download = await Promise.all([broken.waitForEvent('download'), broken.getByRole('button',{name:'导出当前内存与有效草稿 JSON 备份'}).click()]).then(x=>x[0]);
   const downloadedPath = await download.path();
-  const fs = require('node:fs');
   const backup = JSON.parse(fs.readFileSync(downloadedPath,'utf8'));
   if (backup.tasks.length !== 2 || !backup.tasks.some(t=>t.name==='存储失败恢复测试') || !backup.tasks.some(t=>t.name==='有效未提交草稿')) throw new Error('存储失败后的备份未包含已保存内存数据和有效草稿');
   await brokenContext.close();
@@ -122,6 +157,6 @@ const { chromium } = require('/opt/homebrew/lib/node_modules/playwright');
   const memoryDownload=await Promise.all([failArchive.waitForEvent('download'),failArchive.getByRole('button',{name:'导出当前内存与有效草稿 JSON 备份'}).click()]).then(x=>x[0]);
   if (JSON.parse(fs.readFileSync(await memoryDownload.path(),'utf8')).tasks.length!==1) throw new Error('归档失败后当前有效内存备份缺失');
   await failArchiveContext.close();
-  await browser.close();
   console.log('UI flow PASS: 示例、录入、XSS 文本、刷新、筛选、原子导入、存储失败恢复、三视口。');
+  } finally { await browser.close(); }
 })().catch(e => { console.error(e.stack || e); process.exit(1); });

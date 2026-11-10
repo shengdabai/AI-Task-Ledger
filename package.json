@@ -1,0 +1,13 @@
+{
+  "name": "ai-task-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node --check core.js && node --check app.js && node --check sample-data.js",
+    "test": "node --test tests/core.test.cjs tests/app.test.cjs tests/bundle.test.cjs",
+    "test:ui": "node tests/ui-test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.57.0"
+  }
+}

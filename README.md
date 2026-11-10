@@ -42,6 +42,6 @@
 
 - `node --check core.js && node --check app.js && node --check sample-data.js`
 - `node --test tests/core.test.cjs`：22/22 通过。
-- `node tests/ui-test.cjs`：混合示例身份、录入、XSS 文本、刷新持久化、筛选、非法导入原子拒绝、合法导入预览确认、存储失败后的内存与有效草稿备份、损坏原始存储的归档或精确下载均通过。
+- 浏览器测试先运行 `npm ci --registry=https://registry.npmjs.org` 和 `npx --registry=https://registry.npmjs.org playwright install chromium-headless-shell`，再运行 `node tests/ui-test.cjs`（单文件入口用 `node tests/ui-test.cjs 单文件入口.html`）。原验收覆盖混合示例身份、录入、XSS 文本、刷新持久化、筛选、非法导入原子拒绝、合法导入预览确认、存储失败后的内存与有效草稿备份、损坏原始存储的归档或精确下载。
 - 三视口：1440、768、390 像素均无横向溢出；可见按钮最小高度 44 像素。
 

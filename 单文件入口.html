@@ -104,6 +104,7 @@
   var OUTCOMES = ['pending', 'passed', 'failed'];
   var USAGE_UNITS = ['percentage_points', 'tokens', 'requests', 'credits', 'minutes', 'other'];
   var MAX_TEXT = 1000;
+  var MAX_TASKS = 10000;
   var MAX_MINUTES = 1000000;
   var MAX_CENTS = 1000000000000;
 
@@ -186,7 +187,7 @@
     if (!obj(raw)) return { ok: false, error: '备份内容必须是对象' };
     if (raw.version !== VERSION) return { ok: false, error: '不支持的版本号' };
     if (typeof raw.synthetic !== 'boolean') return { ok: false, error: 'synthetic 必须是布尔值' };
-    if (!Array.isArray(raw.tasks) || raw.tasks.length > 10000) return { ok: false, error: 'tasks 必须是最多 10000 条的数组' };
+    if (!Array.isArray(raw.tasks) || raw.tasks.length > MAX_TASKS) return { ok: false, error: 'tasks 必须是最多 ' + MAX_TASKS + ' 条的数组' };
     var ids = new Set(), tasks = [];
     for (var i = 0; i < raw.tasks.length; i++) {
       var e = validateTask(raw.tasks[i]);
@@ -256,6 +257,10 @@
     ]); });
     return '\ufeff' + rows.map(function (r) { return r.map(csvSafe).join(','); }).join('\n');
   }
+  function markdownText(value) {
+    return String(value).replace(/[\\`*_{}\[\]()#!|~]/g, '\\$&')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n\u2028\u2029]+/g, ' ');
+  }
   function exportMarkdown(state) {
     var s = summarize(state), out = ['# AI 单任务投入报告','', state.synthetic ? '> 报告含合成示例；每条任务单独标记身份。' : '> 本报告来自本机手工记录。', '',
       '- 本人记录：' + s.realTasks + ' 项；合成示例：' + s.syntheticTasks + ' 项', '- 本人记录中验收通过：' + s.passed, '- 本人记录中 API 费用未知：' + s.unknownApi + ' 项',
@@ -265,15 +270,15 @@
     s.humanByCurrency.forEach(function (x) { out.push('- 人工估算 ' + x.currency + ' ' + (x.cents / 100).toFixed(2)); });
     out.push('- 人工时薪未知：' + s.unknownWage + ' 项');
     out.push('', '## 同类任务观察', '', '> 仅统计验收通过任务的总耗时中位数。这是描述性记录，不证明 AI 造成了节省。');
-    s.comparisons.forEach(function (g) { out.push('- ' + g.type + '：全部 ' + g.total + ' 项，通过 ' + g.passed + ' 项；通过样本中位总耗时 ' + (g.medianPassedMinutes === null ? '无法计算' : g.medianPassedMinutes + ' 分钟')); });
+    s.comparisons.forEach(function (g) { out.push('- ' + markdownText(g.type) + '：全部 ' + g.total + ' 项，通过 ' + g.passed + ' 项；通过样本中位总耗时 ' + (g.medianPassedMinutes === null ? '无法计算' : g.medianPassedMinutes + ' 分钟')); });
     out.push('', '## 任务明细', '');
     state.tasks.forEach(function (t) {
       var u = usageDelta(t.subscriptionUsage);
-      out.push('### ' + t.name, '', '- 身份：' + (t.synthetic ? '合成示例' : '本人记录'), '- 日期：' + t.date, '- 类型：' + t.type, '- 模型：' + t.model,
-        '- 验收条件：' + t.acceptance, '- 结果：' + t.outcome, '- 工作 / 返工：' + t.workMinutes + ' / ' + t.reworkMinutes + ' 分钟',
+      out.push('### ' + markdownText(t.name), '', '- 身份：' + (t.synthetic ? '合成示例' : '本人记录'), '- 日期：' + t.date, '- 类型：' + markdownText(t.type), '- 模型：' + markdownText(t.model),
+        '- 验收条件：' + markdownText(t.acceptance), '- 结果：' + t.outcome, '- 工作 / 返工：' + t.workMinutes + ' / ' + t.reworkMinutes + ' 分钟',
         '- API 费用：' + (t.api ? t.api.currency + ' ' + (t.api.amountCents / 100).toFixed(2) : '未知'),
-        '- 额度观察：' + (u.status === 'observed' ? String(u.delta) + ' ' + (u.unit === 'percentage_points' ? '百分点' : (u.unitLabel || u.unit)) : (u.status === 'unknown' ? '未记录' : (u.status === 'reset' ? '窗口已重置，不可比较' : '窗口不可比'))),
-        '- 备注：' + (t.notes || '无'), '');
+        '- 额度观察：' + (u.status === 'observed' ? String(u.delta) + ' ' + markdownText(u.unit === 'percentage_points' ? '百分点' : (u.unitLabel || u.unit)) : (u.status === 'unknown' ? '未记录' : (u.status === 'reset' ? '窗口已重置，不可比较' : '窗口不可比'))),
+        '- 备注：' + markdownText(t.notes || '无'), '');
     });
     return out.join('\n');
   }
@@ -281,12 +286,11 @@
     var s = String(v).trim(); if (!/^\d+(?:\.\d{1,2})?$/.test(s)) return null;
     var cents = Math.round(Number(s) * 100); return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null;
   }
-  var api = { VERSION:VERSION, OUTCOMES:OUTCOMES, USAGE_UNITS:USAGE_UNITS, emptyState:emptyState, validDate:validDate,
+  var api = { VERSION:VERSION, MAX_TASKS:MAX_TASKS, OUTCOMES:OUTCOMES, USAGE_UNITS:USAGE_UNITS, emptyState:emptyState, validDate:validDate,
     validateTask:validateTask, validateState:validateState, validateImport:validateImport, summarize:summarize, usageDelta:usageDelta,
     exportCsv:exportCsv, exportMarkdown:exportMarkdown, parseMoney:parseMoney, median:median };
   root.TaskEffortCore = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-
 </script><script>
 (function (root) {
   'use strict';
@@ -300,18 +304,18 @@
     ]
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-
 </script><script>
 (function () {
   'use strict';
   var C = globalThis.TaskEffortCore, KEY = 'taskEffortLedger.v1', RECOVERY_PREFIX = 'taskEffortLedger.corruptBackup.v1.';
-  var state = C.emptyState(), editingId = null, pendingImport = null, pendingAction = null, dirty = false, corruptRaw = null;
+  var state = C.emptyState(), editingId = null, pendingImport = null, importSequence = 0, pendingAction = null, dirty = false, corruptRaw = null;
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function today() {
     var q = new URLSearchParams(location.search).get('today');
     if (q && C.validDate(q)) { $('today-banner').textContent = '基准日 ' + q + '（由地址参数固定）'; $('today-banner').hidden = false; return q; }
-    return new Date().toISOString().slice(0,10);
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
   function load() {
     try { var raw = localStorage.getItem(KEY); if (!raw) return; var v = C.validateImport(raw); if (!v.ok) { corruptRaw=raw; throw new Error(v.error); } state = v.data; }
@@ -390,10 +394,10 @@
   function resetForm() { editingId=null;$('task-form').reset();$('date').value=today();$('work-minutes').value='0';$('rework-minutes').value='0';$('api-currency').value='USD';$('wage-currency').value='CNY';$('usage-comparable').checked=true;toggleFields();$('form-title').textContent='新增任务';$('save-task').textContent='保存任务';$('cancel-edit').hidden=true;hideError();setDirty(false); }
   function fillForm(t){editingId=t.id;$('name').value=t.name;$('type').value=t.type;$('date').value=t.date;$('model').value=t.model;$('acceptance').value=t.acceptance;$('outcome').value=t.outcome;$('work-minutes').value=t.workMinutes;$('rework-minutes').value=t.reworkMinutes;$('api-known').checked=!!t.api;if(t.api){$('api-amount').value=money(t.api.amountCents);$('api-currency').value=t.api.currency;}$('usage-known').checked=!!t.subscriptionUsage;if(t.subscriptionUsage){$('usage-unit').value=t.subscriptionUsage.unit;$('unit-label').value=t.subscriptionUsage.unitLabel;$('usage-before').value=t.subscriptionUsage.before;$('usage-after').value=t.subscriptionUsage.after;$('window-label').value=t.subscriptionUsage.windowLabel;$('usage-comparable').checked=t.subscriptionUsage.comparable;$('usage-reset').checked=t.subscriptionUsage.reset;}$('wage-known').checked=!!t.wage;if(t.wage){$('wage-amount').value=money(t.wage.centsPerHour);$('wage-currency').value=t.wage.currency;}$('notes').value=t.notes;toggleFields();$('form-title').textContent='编辑任务';$('save-task').textContent='保存修改';$('cancel-edit').hidden=false;setDirty(false);$('form-title').scrollIntoView({behavior:'smooth'});}
   function toggleFields(){$('api-fields').hidden=!$('api-known').checked;$('usage-fields').hidden=!$('usage-known').checked;$('wage-fields').hidden=!$('wage-known').checked;$('unit-label-wrap').hidden=$('usage-unit').value!=='other';}
-  $('task-form').addEventListener('submit',function(e){e.preventDefault();var t=formValue(),err=C.validateTask(t);if(err){showError(err);return;}var i=state.tasks.findIndex(function(x){return x.id===t.id;});if(i>=0)state.tasks[i]=t;else state.tasks.push(t);var persisted=save();resetForm();render();flash(persisted?'任务已保存到浏览器。':'任务仅保留在当前页面内存，请立即导出恢复 JSON。');});
+  $('task-form').addEventListener('submit',function(e){e.preventDefault();var t=formValue(),err=C.validateTask(t);if(err){showError(err);return;}var i=state.tasks.findIndex(function(x){return x.id===t.id;});if(i<0&&state.tasks.length>=C.MAX_TASKS){showError('任务数量已达 '+C.MAX_TASKS+' 条上限。请先导出备份并删除不再需要的任务。');return;}if(i>=0)state.tasks[i]=t;else state.tasks.push(t);var persisted=save();resetForm();render();flash(persisted?'任务已保存到浏览器。':'任务仅保留在当前页面内存，请立即导出恢复 JSON。');});
   $('task-form').addEventListener('input',function(){setDirty(true);toggleFields();});
   $('reset-form').addEventListener('click',resetForm);$('cancel-edit').addEventListener('click',resetForm);$('filter').addEventListener('change',render);
-  $('confirm-yes').addEventListener('click',function(){var f=pendingAction;closeAsk();if(f)f();});$('confirm-no').addEventListener('click',closeAsk);
+  $('confirm-yes').addEventListener('click',function(){if(blockIfDirty())return;var f=pendingAction;closeAsk();if(f)f();});$('confirm-no').addEventListener('click',closeAsk);
   $('load-sample').addEventListener('click',function(){if(blockIfDirty())return;ask('载入 3 条合成示例会替换当前 '+state.tasks.length+' 条任务。',function(){var v=C.validateState(globalThis.TaskEffortSample);state=v.data;save();render();flash('已载入合成示例。');});});
   $('clear-all').addEventListener('click',function(){if(blockIfDirty())return;ask('清空全部 '+state.tasks.length+' 条任务？请先导出 JSON 备份。',function(){state=C.emptyState();save();render();flash('已清空全部任务。');});});
   $('export-json').addEventListener('click',function(){if(blockIfDirty())return;download('ai-task-effort-ledger.json',JSON.stringify(state,null,2),'application/json');});
@@ -402,11 +406,22 @@
   $('export-corrupt').addEventListener('click',function(){if(corruptRaw!==null)download('ai-task-effort-ledger-corrupt-raw.txt',corruptRaw,'text/plain');});
   $('export-recovery').addEventListener('click',function(){download('ai-task-effort-ledger-recovery.json',JSON.stringify(recoveryState(),null,2),'application/json');});
   $('pick-import').addEventListener('click',function(){if(blockIfDirty())return;$('import-file').click();});
-  $('import-file').addEventListener('change',function(){var file=this.files[0];this.value='';if(!file)return;var r=new FileReader();r.onload=function(){var v=C.validateImport(String(r.result));if(!v.ok){flash('导入失败：'+v.error);return;}pendingImport=v.data;$('import-preview').textContent='备份包含 '+v.data.tasks.length+' 条任务，'+(v.data.synthetic?'其中含合成示例':'全部为本人记录')+'。确认后会替换当前 '+state.tasks.length+' 条任务。';$('import-panel').hidden=false;$('import-confirm').focus();};r.readAsText(file);});
-  $('import-confirm').addEventListener('click',function(){if(!pendingImport)return;state=pendingImport;pendingImport=null;$('import-panel').hidden=true;save();resetForm();render();flash('导入完成。');});$('import-cancel').addEventListener('click',function(){pendingImport=null;$('import-panel').hidden=true;});
+  function cancelImport() { importSequence++;pendingImport=null;$('import-panel').hidden=true; }
+  $('import-file').addEventListener('change',function(){
+    var file=this.files[0];this.value='';if(!file)return;
+    cancelImport();if(blockIfDirty())return;
+    var sequence=importSequence, r=new FileReader();
+    r.onload=function(){
+      if(sequence!==importSequence)return;
+      var v=C.validateImport(String(r.result));if(!v.ok){flash('导入失败：'+v.error);return;}
+      pendingImport=v.data;$('import-preview').textContent='备份包含 '+v.data.tasks.length+' 条任务，'+(v.data.synthetic?'其中含合成示例':'全部为本人记录')+'。确认后会替换当前 '+state.tasks.length+' 条任务。';$('import-panel').hidden=false;$('import-confirm').focus();
+    };
+    r.onerror=r.onabort=function(){if(sequence===importSequence){cancelImport();flash('导入失败：无法读取所选文件，请重新选择。');}};
+    r.readAsText(file);
+  });
+  $('import-confirm').addEventListener('click',function(){if(!pendingImport||blockIfDirty())return;state=pendingImport;cancelImport();save();resetForm();render();flash('导入完成。');});$('import-cancel').addEventListener('click',cancelImport);
   load();today();resetForm();render();
 })();
-
 </script>
 </body>
 </html>

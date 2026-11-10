@@ -4,6 +4,7 @@
   var OUTCOMES = ['pending', 'passed', 'failed'];
   var USAGE_UNITS = ['percentage_points', 'tokens', 'requests', 'credits', 'minutes', 'other'];
   var MAX_TEXT = 1000;
+  var MAX_TASKS = 10000;
   var MAX_MINUTES = 1000000;
   var MAX_CENTS = 1000000000000;
 
@@ -86,7 +87,7 @@
     if (!obj(raw)) return { ok: false, error: '备份内容必须是对象' };
     if (raw.version !== VERSION) return { ok: false, error: '不支持的版本号' };
     if (typeof raw.synthetic !== 'boolean') return { ok: false, error: 'synthetic 必须是布尔值' };
-    if (!Array.isArray(raw.tasks) || raw.tasks.length > 10000) return { ok: false, error: 'tasks 必须是最多 10000 条的数组' };
+    if (!Array.isArray(raw.tasks) || raw.tasks.length > MAX_TASKS) return { ok: false, error: 'tasks 必须是最多 ' + MAX_TASKS + ' 条的数组' };
     var ids = new Set(), tasks = [];
     for (var i = 0; i < raw.tasks.length; i++) {
       var e = validateTask(raw.tasks[i]);
@@ -156,6 +157,10 @@
     ]); });
     return '\ufeff' + rows.map(function (r) { return r.map(csvSafe).join(','); }).join('\n');
   }
+  function markdownText(value) {
+    return String(value).replace(/[\\`*_{}\[\]()#!|~]/g, '\\$&')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n\u2028\u2029]+/g, ' ');
+  }
   function exportMarkdown(state) {
     var s = summarize(state), out = ['# AI 单任务投入报告','', state.synthetic ? '> 报告含合成示例；每条任务单独标记身份。' : '> 本报告来自本机手工记录。', '',
       '- 本人记录：' + s.realTasks + ' 项；合成示例：' + s.syntheticTasks + ' 项', '- 本人记录中验收通过：' + s.passed, '- 本人记录中 API 费用未知：' + s.unknownApi + ' 项',
@@ -165,15 +170,15 @@
     s.humanByCurrency.forEach(function (x) { out.push('- 人工估算 ' + x.currency + ' ' + (x.cents / 100).toFixed(2)); });
     out.push('- 人工时薪未知：' + s.unknownWage + ' 项');
     out.push('', '## 同类任务观察', '', '> 仅统计验收通过任务的总耗时中位数。这是描述性记录，不证明 AI 造成了节省。');
-    s.comparisons.forEach(function (g) { out.push('- ' + g.type + '：全部 ' + g.total + ' 项，通过 ' + g.passed + ' 项；通过样本中位总耗时 ' + (g.medianPassedMinutes === null ? '无法计算' : g.medianPassedMinutes + ' 分钟')); });
+    s.comparisons.forEach(function (g) { out.push('- ' + markdownText(g.type) + '：全部 ' + g.total + ' 项，通过 ' + g.passed + ' 项；通过样本中位总耗时 ' + (g.medianPassedMinutes === null ? '无法计算' : g.medianPassedMinutes + ' 分钟')); });
     out.push('', '## 任务明细', '');
     state.tasks.forEach(function (t) {
       var u = usageDelta(t.subscriptionUsage);
-      out.push('### ' + t.name, '', '- 身份：' + (t.synthetic ? '合成示例' : '本人记录'), '- 日期：' + t.date, '- 类型：' + t.type, '- 模型：' + t.model,
-        '- 验收条件：' + t.acceptance, '- 结果：' + t.outcome, '- 工作 / 返工：' + t.workMinutes + ' / ' + t.reworkMinutes + ' 分钟',
+      out.push('### ' + markdownText(t.name), '', '- 身份：' + (t.synthetic ? '合成示例' : '本人记录'), '- 日期：' + t.date, '- 类型：' + markdownText(t.type), '- 模型：' + markdownText(t.model),
+        '- 验收条件：' + markdownText(t.acceptance), '- 结果：' + t.outcome, '- 工作 / 返工：' + t.workMinutes + ' / ' + t.reworkMinutes + ' 分钟',
         '- API 费用：' + (t.api ? t.api.currency + ' ' + (t.api.amountCents / 100).toFixed(2) : '未知'),
-        '- 额度观察：' + (u.status === 'observed' ? String(u.delta) + ' ' + (u.unit === 'percentage_points' ? '百分点' : (u.unitLabel || u.unit)) : (u.status === 'unknown' ? '未记录' : (u.status === 'reset' ? '窗口已重置，不可比较' : '窗口不可比'))),
-        '- 备注：' + (t.notes || '无'), '');
+        '- 额度观察：' + (u.status === 'observed' ? String(u.delta) + ' ' + markdownText(u.unit === 'percentage_points' ? '百分点' : (u.unitLabel || u.unit)) : (u.status === 'unknown' ? '未记录' : (u.status === 'reset' ? '窗口已重置，不可比较' : '窗口不可比'))),
+        '- 备注：' + markdownText(t.notes || '无'), '');
     });
     return out.join('\n');
   }
@@ -181,7 +186,7 @@
     var s = String(v).trim(); if (!/^\d+(?:\.\d{1,2})?$/.test(s)) return null;
     var cents = Math.round(Number(s) * 100); return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null;
   }
-  var api = { VERSION:VERSION, OUTCOMES:OUTCOMES, USAGE_UNITS:USAGE_UNITS, emptyState:emptyState, validDate:validDate,
+  var api = { VERSION:VERSION, MAX_TASKS:MAX_TASKS, OUTCOMES:OUTCOMES, USAGE_UNITS:USAGE_UNITS, emptyState:emptyState, validDate:validDate,
     validateTask:validateTask, validateState:validateState, validateImport:validateImport, summarize:summarize, usageDelta:usageDelta,
     exportCsv:exportCsv, exportMarkdown:exportMarkdown, parseMoney:parseMoney, median:median };
   root.TaskEffortCore = api; if (typeof module !== 'undefined') module.exports = api;
